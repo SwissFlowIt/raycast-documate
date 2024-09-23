@@ -1,6 +1,6 @@
 # Raycast extension for Documate
 
-The Raycast Documate Extension allows you to search your documentation seamlessly and quickly without lifting your fingers off the keyboard. It integrates with ServiceNow, enabling users to access their Documate documentation effortlessly.
+Enhance your productivity with the Raycast extension for Documate. Quickly search your ServiceNow documentation in Documate without taking your hands off the keyboard, streamlining access to your knowledge base and improving workflow efficiency.
 
 <img width="862" alt="Screenshot 2024-09-23 at 15 45 43" src="https://github.com/user-attachments/assets/63fa3a91-f6ae-416b-9dbd-92ad386695a2">
 <img width="862" alt="Screenshot 2024-09-23 at 15 46 12" src="https://github.com/user-attachments/assets/1fb7aad0-9fb3-456e-8760-0fb3e29d094e">
@@ -10,16 +10,16 @@ The Raycast Documate Extension allows you to search your documentation seamlessl
 
 ## Background
 
-This extension was developed to enhance productivity by providing a fast and efficient way to search through documentation directly from the Raycast interface. By leveraging ServiceNow’s capabilities, users can find the information they need instantly.
+This extension was developed to enhance productivity by providing a fast and efficient way to search through documentation directly from the Raycast interface. By leveraging Documate’s capabilities, users can find the information they need instantly.
 
 ## Features
 
 * Quick Search: Instantly search through your documentation without disrupting your workflow.
-* Integration with ServiceNow: Seamlessly connects to your ServiceNow instance to pull in relevant documentation.
 * User-Friendly Interface: Designed to be intuitive and easy to navigate.
 
 ## Prerequisites
-
+	
+*	An instance of ServiceNow with [Documate installed](https://swissflowit.com/documate/contact/).
 * A ServiceNow account with API access.
 * Raycast installed on your machine.
 
