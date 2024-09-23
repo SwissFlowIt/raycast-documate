@@ -19,8 +19,8 @@ This extension was developed to enhance productivity by providing a fast and eff
 
 ## Prerequisites
 	
-*	An instance of ServiceNow with [Documate installed](https://swissflowit.com/documate/contact/).
-* A ServiceNow account with API access.
+* An instance of ServiceNow with [Documate installed](https://swissflowit.com/documate/contact/).
+* A [ServiceNow account with API access](https://www.servicenow.com/community/developer-advocate-blog/inbound-rest-api-keys/ba-p/2854924).
 * Raycast installed on your machine.
 
 ## Installation
