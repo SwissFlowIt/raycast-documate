@@ -1,0 +1,60 @@
+{
+  "$schema": "https://www.raycast.com/schemas/extension.json",
+  "name": "documate",
+  "title": "Documate",
+  "description": "Search and explore content from Documate.",
+  "icon": "extension_icon.png",
+  "author": "ralvarez",
+  "owner": "swissflowit",
+  "categories": [
+    "Productivity"
+  ],
+  "license": "MIT",
+  "commands": [
+    {
+      "name": "browse-pages",
+      "title": "Browse pages",
+      "description": "Access and view a list of pages from Documate",
+      "mode": "view"
+    }
+  ],
+  "preferences": [
+    {
+      "name": "instance",
+      "title": "ServiceNow instance",
+      "description": "Just the instance identifier. Not the URL",
+      "type": "textfield",
+      "required": true
+    },
+    {
+      "name": "token",
+      "title": "API token",
+      "description": "https://www.servicenow.com/community/developer-advocate-blog/inbound-rest-api-keys/ba-p/2854924",
+      "type": "password",
+      "required": true
+    }
+  ],
+  "dependencies": {
+    "@raycast/api": "^1.83.1",
+    "@raycast/utils": "^1.17.0",
+    "axios": "^1.7.7",
+    "lodash": "^4.17.21"
+  },
+  "devDependencies": {
+    "@raycast/eslint-config": "^1.0.11",
+    "@types/lodash": "^4.17.7",
+    "@types/node": "20.8.10",
+    "@types/react": "18.3.3",
+    "eslint": "^8.57.0",
+    "prettier": "^3.3.3",
+    "typescript": "^5.4.5"
+  },
+  "scripts": {
+    "build": "ray build -e dist -o dist",
+    "dev": "ray develop",
+    "fix-lint": "ray lint --fix",
+    "lint": "ray lint",
+    "prepublishOnly": "echo \"\\n\\nIt seems like you are trying to publish the Raycast extension to npm.\\n\\nIf you did intend to publish it to npm, remove the \\`prepublishOnly\\` script and rerun \\`npm publish\\` again.\\nIf you wanted to publish it to the Raycast Store instead, use \\`npm run publish\\` instead.\\n\\n\" && exit 1",
+    "publish": "npx @raycast/api@latest publish"
+  }
+}
