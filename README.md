@@ -34,7 +34,7 @@ This extension was developed to enhance productivity by providing a fast and eff
 
 ## Usage
 
-* Open Raycast and start typing to search through your documentation.
+* Open Raycast and search for Documate commands in the root search.
 * Use filters to narrow down your results based on workspaces or update dates.
 
 ## Contributions
