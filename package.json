@@ -27,9 +27,16 @@
       "required": true
     },
     {
-      "name": "token",
-      "title": "API token",
-      "description": "https://www.servicenow.com/community/developer-advocate-blog/inbound-rest-api-keys/ba-p/2854924",
+      "name": "username",
+      "title": "User name",
+      "description": "",
+      "type": "textfield",
+      "required": true
+    },
+    {
+      "name": "password",
+      "title": "Password",
+      "description": "",
       "type": "password",
       "required": true
     }

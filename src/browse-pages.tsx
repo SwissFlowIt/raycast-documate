@@ -10,7 +10,10 @@ import { Workspace, Page } from "./types";
 export default function Command() {
   const [showDetails, setShowDetails] = useCachedState("show-details", false);
   const [showPreview, setShowPreview] = useCachedState("show-preview", false);
-  const [showRecordInformation, setShowRecordInformation] = useCachedState("show-record-information", false);
+  const [showRecordInformation, setShowRecordInformation] = useCachedState(
+    "show-record-information",
+    false
+  );
   const [workspaces, setWorkspaces] = useState<Workspace[] | null>(null);
   const [pages, setPages] = useState<Page[] | null>(null);
   const [finishedLoading, setFinishedLoading] = useState(false);
@@ -24,15 +27,18 @@ export default function Command() {
   useEffect(() => {
     const instance = axios.create({
       baseURL: `${instanceUrl}/api/now/table/`,
-      headers: {
-        "x-sn-apikey": preferences.token,
+      auth: {
+        username: preferences.username,
+        password: preferences.password,
       },
     });
 
     const fetchRecords = async () => {
       // Get workspaces
       instance
-        .get(`u_documate_workspace?sysparm_exclude_reference_link=true&sysparm_query=u_active=true^ORDERBYu_name`)
+        .get(
+          `u_documate_workspace?sysparm_exclude_reference_link=true&sysparm_query=u_active=true^ORDERBYu_name`
+        )
         .then((response) => {
           setWorkspaces(response.data.result);
         })
@@ -43,7 +49,7 @@ export default function Command() {
       // Get pages
       instance
         .get(
-          `u_documate_page?sysparm_exclude_reference_link=true&sysparm_query=u_workspace.u_active=true^ORDERBYDESCsys_updated_on`,
+          `u_documate_page?sysparm_exclude_reference_link=true&sysparm_query=u_workspace.u_active=true^ORDERBYDESCsys_updated_on`
         )
         .then((response) => {
           const result = response.data.result;
@@ -77,16 +83,22 @@ export default function Command() {
           (item) =>
             item.u_title.toLowerCase().includes(searchText) ||
             item.u_subtitle.toLowerCase().includes(searchText) ||
-            find(workspaces, ["sys_id", item.u_workspace])?.u_name.toLowerCase().includes(searchText) ||
-            item.u_content.toLowerCase().includes(searchText),
-        ),
+            find(workspaces, ["sys_id", item.u_workspace])
+              ?.u_name.toLowerCase()
+              .includes(searchText) ||
+            item.u_content.toLowerCase().includes(searchText)
+        )
       );
   }, [searchText]);
 
   return (
     <List
       navigationTitle={
-        finishedLoading ? (pages?.length ? `Showing ${pages.length} results` : `No results found`) : "Loading"
+        finishedLoading
+          ? pages?.length
+            ? `Showing ${pages.length} results`
+            : `No results found`
+          : "Loading"
       }
       isLoading={!finishedLoading}
       filtering={false}
@@ -95,8 +107,16 @@ export default function Command() {
       isShowingDetail={showDetails}
       searchBarAccessory={
         <List.Dropdown tooltip="What do you want to search for?">
-          <List.Dropdown.Item title="By update date" value="updated" icon={Icon.Calendar} />
-          <List.Dropdown.Item title="By workspace" value="workspaces" icon={Icon.AppWindowGrid2x2} />
+          <List.Dropdown.Item
+            title="By update date"
+            value="updated"
+            icon={Icon.Calendar}
+          />
+          <List.Dropdown.Item
+            title="By workspace"
+            value="workspaces"
+            icon={Icon.AppWindowGrid2x2}
+          />
         </List.Dropdown>
       }
     >
@@ -153,7 +173,9 @@ export default function Command() {
 
                       <List.Item.Detail.Metadata.TagList title="Updated on">
                         <List.Item.Detail.Metadata.TagList.Item
-                          text={new Date(page.sys_updated_on + " GMT").toLocaleString()}
+                          text={new Date(
+                            page.sys_updated_on + " GMT"
+                          ).toLocaleString()}
                         />
                       </List.Item.Detail.Metadata.TagList>
 
@@ -166,42 +188,79 @@ export default function Command() {
 
                       <List.Item.Detail.Metadata.TagList title="Active options">
                         {page.u_show_cover_photo == "true" && (
-                          <List.Item.Detail.Metadata.TagList.Item text="Cover" color={Color.Blue} />
+                          <List.Item.Detail.Metadata.TagList.Item
+                            text="Cover"
+                            color={Color.Blue}
+                          />
                         )}
                         {page.u_show_subtitle == "true" && (
-                          <List.Item.Detail.Metadata.TagList.Item text="Subtitle" color={Color.Green} />
+                          <List.Item.Detail.Metadata.TagList.Item
+                            text="Subtitle"
+                            color={Color.Green}
+                          />
                         )}
                         {page.u_show_authors == "true" && (
-                          <List.Item.Detail.Metadata.TagList.Item text="Authors" color={Color.Magenta} />
+                          <List.Item.Detail.Metadata.TagList.Item
+                            text="Authors"
+                            color={Color.Magenta}
+                          />
                         )}
                         {page.u_show_last_edited == "true" && (
-                          <List.Item.Detail.Metadata.TagList.Item text="Last edited" color={Color.Orange} />
+                          <List.Item.Detail.Metadata.TagList.Item
+                            text="Last edited"
+                            color={Color.Orange}
+                          />
                         )}
                         {page.u_show_outline == "true" && (
-                          <List.Item.Detail.Metadata.TagList.Item text="Outline" color={Color.Purple} />
+                          <List.Item.Detail.Metadata.TagList.Item
+                            text="Outline"
+                            color={Color.Purple}
+                          />
                         )}
                         {page.u_show_subpages == "true" && (
-                          <List.Item.Detail.Metadata.TagList.Item text="Subpages" color={Color.Red} />
+                          <List.Item.Detail.Metadata.TagList.Item
+                            text="Subpages"
+                            color={Color.Red}
+                          />
                         )}
                         {page.u_show_previous_and_next == "true" && (
-                          <List.Item.Detail.Metadata.TagList.Item text="Previous and next links" color={Color.Yellow} />
+                          <List.Item.Detail.Metadata.TagList.Item
+                            text="Previous and next links"
+                            color={Color.Yellow}
+                          />
                         )}
                       </List.Item.Detail.Metadata.TagList>
                       <List.Item.Detail.Metadata.Label
                         title="Font type"
-                        text={page.u_font_type == "standard" ? "Standard" : { value: "Serif", color: Color.Blue }}
+                        text={
+                          page.u_font_type == "standard"
+                            ? "Standard"
+                            : { value: "Serif", color: Color.Blue }
+                        }
                       />
                       <List.Item.Detail.Metadata.Label
                         title="Font size"
-                        text={page.u_font_size == "standard" ? "Standard" : { value: "Large", color: Color.Blue }}
+                        text={
+                          page.u_font_size == "standard"
+                            ? "Standard"
+                            : { value: "Large", color: Color.Blue }
+                        }
                       />
                       <List.Item.Detail.Metadata.Label
                         title="Width"
-                        text={page.u_width == "standard" ? "Standard" : { value: "Full", color: Color.Blue }}
+                        text={
+                          page.u_width == "standard"
+                            ? "Standard"
+                            : { value: "Full", color: Color.Blue }
+                        }
                       />
                       <List.Item.Detail.Metadata.Label
                         title="Alignment"
-                        text={page.u_alignment == "center" ? "Center" : { value: "Left", color: Color.Blue }}
+                        text={
+                          page.u_alignment == "center"
+                            ? "Center"
+                            : { value: "Left", color: Color.Blue }
+                        }
                       />
                     </List.Item.Detail.Metadata>
                   )
@@ -230,12 +289,20 @@ export default function Command() {
                     <Action
                       title={"Toggle show page preview"}
                       onAction={() => setShowPreview((x) => !x)}
-                      icon={showPreview ? { source: Icon.CheckCircle, tintColor: Color.Blue } : Icon.Circle}
+                      icon={
+                        showPreview
+                          ? { source: Icon.CheckCircle, tintColor: Color.Blue }
+                          : Icon.Circle
+                      }
                     />
                     <Action
                       title={"Toggle show record information"}
                       onAction={() => setShowRecordInformation((x) => !x)}
-                      icon={showRecordInformation ? { source: Icon.CheckCircle, tintColor: Color.Blue } : Icon.Circle}
+                      icon={
+                        showRecordInformation
+                          ? { source: Icon.CheckCircle, tintColor: Color.Blue }
+                          : Icon.Circle
+                      }
                     />
                   </ActionPanel.Section>
                 )}

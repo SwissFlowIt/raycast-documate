@@ -10,8 +10,10 @@
 type ExtensionPreferences = {
   /** ServiceNow instance - Just the instance identifier. Not the URL */
   "instance": string,
-  /** API token - https://www.servicenow.com/community/developer-advocate-blog/inbound-rest-api-keys/ba-p/2854924 */
-  "token": string
+  /** User name -  */
+  "username": string,
+  /** Password -  */
+  "password": string
 }
 
 /** Preferences accessible in all the extension's commands */
