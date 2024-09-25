@@ -20,7 +20,6 @@ This extension was developed to enhance productivity by providing a fast and eff
 ## Prerequisites
 	
 * An instance of ServiceNow with [Documate installed](https://swissflowit.com/documate/contact/).
-* A [ServiceNow account with API access](https://www.servicenow.com/community/developer-advocate-blog/inbound-rest-api-keys/ba-p/2854924).
 * [Raycast](https://www.raycast.com/) installed on your machine.
 
 ## Installation
@@ -28,9 +27,10 @@ This extension was developed to enhance productivity by providing a fast and eff
 1. Clone this repository to your local machine.
 2. Open Raycast and navigate to Extensions.
 3. Click on “Add Extension” and select the cloned repository.
-4. Enter your ServiceNow instance URL and API key in the extension settings.
+4. Enter your ServiceNow instance identifier, user name and password in the extension settings.
 
-![Screenshot 2024-09-23 at 16 02 57](https://github.com/user-attachments/assets/1e46951c-bd5e-4dcd-8eba-af456c22942c)
+![Screenshot 2024-09-25 at 17 01 38](https://github.com/user-attachments/assets/3adc59fc-6a07-4c51-b0ad-e96d2fe893bd)
+
 
 ## Usage
 
