@@ -54,12 +54,9 @@ export default function Command() {
         .then((response) => {
           const result = response.data.result;
           setPages(result);
-          filterList(result);
-          setFinishedLoading(true);
         })
         .catch((error) => {
           console.error("Error: ", error.response?.data || error.message);
-          setFinishedLoading(true);
         });
     };
     fetchRecords();
@@ -77,28 +74,42 @@ export default function Command() {
   }, [showDetails]);
 
   useEffect(() => {
-    if (pages)
-      filterList(
-        pages.filter(
-          (item) =>
-            item.u_title.toLowerCase().includes(searchText) ||
-            item.u_subtitle.toLowerCase().includes(searchText) ||
-            find(workspaces, ["sys_id", item.u_workspace])
-              ?.u_name.toLowerCase()
-              .includes(searchText) ||
-            item.u_content.toLowerCase().includes(searchText)
-        )
-      );
-  }, [searchText]);
+    if (filteredList != null) {
+      setFinishedLoading(true);
+    }
+  }, [filteredList]);
+
+  useEffect(() => {
+    if (pages) {
+      if (searchText) {
+        filterList(
+          pages.filter(
+            (item) =>
+              item.u_title.toLowerCase().includes(searchText) ||
+              item.u_subtitle.toLowerCase().includes(searchText) ||
+              find(workspaces, ["sys_id", item.u_workspace])
+                ?.u_name.toLowerCase()
+                .includes(searchText) ||
+              item.u_content.toLowerCase().includes(searchText)
+          )
+        );
+      } else {
+        filterList(pages);
+      }
+    }
+  }, [searchText, pages, workspaces]);
 
   return (
     <List
       navigationTitle={
-        finishedLoading
-          ? pages?.length
-            ? `Showing ${pages.length} results`
-            : `No results found`
-          : "Loading"
+        "Browse pages - " +
+        (finishedLoading
+          ? searchText
+            ? `${filteredList?.length} results from ${pages?.length} pages`
+            : pages?.length
+              ? `${pages.length} pages`
+              : `No results found`
+          : "Loading")
       }
       isLoading={!finishedLoading}
       filtering={false}
