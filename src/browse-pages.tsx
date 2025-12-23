@@ -1,329 +1,25 @@
-/* eslint-disable @raycast/prefer-title-case */
-import { ActionPanel, Action, Icon, List, Color } from "@raycast/api";
-import { useCachedState } from "@raycast/utils";
-import axios from "axios";
-import { find } from "lodash";
-import { useEffect, useState } from "react";
+import {
+  ActionPanel,
+  Action,
+  Icon,
+  List,
+  Color,
+  showToast,
+  Toast,
+} from "@raycast/api";
+import { getAvatarIcon, useCachedState, useFetch } from "@raycast/utils";
+import { useEffect, useMemo, useState } from "react";
 import { getPreferenceValues } from "@raycast/api";
-import { Workspace, Page } from "./types";
+import { Page, Workspace } from "./types";
+import { groupBy } from "lodash";
+import { getSectionTitle } from "./getSectionTitle";
+import { format } from "date-fns";
 
-export default function Command() {
-  const [showDetails, setShowDetails] = useCachedState("show-details", false);
-  const [showPreview, setShowPreview] = useCachedState("show-preview", false);
-  const [showRecordInformation, setShowRecordInformation] = useCachedState(
-    "show-record-information",
-    false
-  );
-  const [workspaces, setWorkspaces] = useState<Workspace[] | null>(null);
-  const [pages, setPages] = useState<Page[] | null>(null);
-  const [finishedLoading, setFinishedLoading] = useState(false);
-  const [searchText, setSearchText] = useState("");
-  const [filteredList, filterList] = useState<Page[] | null>(null);
-
-  const preferences = getPreferenceValues<Preferences>();
-
-  const instanceUrl = `https://${preferences.instance}.service-now.com`;
-
-  useEffect(() => {
-    const instance = axios.create({
-      baseURL: `${instanceUrl}/api/now/table/`,
-      auth: {
-        username: preferences.username,
-        password: preferences.password,
-      },
-    });
-
-    const fetchRecords = async () => {
-      // Get workspaces
-      instance
-        .get(
-          `u_documate_workspace?sysparm_exclude_reference_link=true&sysparm_query=u_active=true^ORDERBYu_name`
-        )
-        .then((response) => {
-          setWorkspaces(response.data.result);
-        })
-        .catch((error) => {
-          console.error("Error: ", error.response?.data || error.message);
-        });
-
-      // Get pages
-      instance
-        .get(
-          `u_documate_page?sysparm_exclude_reference_link=true&sysparm_query=u_workspace.u_active=true^ORDERBYDESCsys_updated_on`
-        )
-        .then((response) => {
-          const result = response.data.result;
-          setPages(result);
-        })
-        .catch((error) => {
-          console.error("Error: ", error.response?.data || error.message);
-        });
-    };
-    fetchRecords();
-  }, []);
-
-  useEffect(() => {
-    if (!showPreview && !showRecordInformation) setShowDetails(false);
-  }, [showPreview, showRecordInformation]);
-
-  useEffect(() => {
-    if (showDetails && !showPreview && !showRecordInformation) {
-      setShowPreview(true);
-      setShowRecordInformation(true);
-    }
-  }, [showDetails]);
-
-  useEffect(() => {
-    if (filteredList != null) {
-      setFinishedLoading(true);
-    }
-  }, [filteredList]);
-
-  useEffect(() => {
-    if (pages) {
-      if (searchText) {
-        filterList(
-          pages.filter(
-            (item) =>
-              item.u_title.toLowerCase().includes(searchText) ||
-              item.u_subtitle.toLowerCase().includes(searchText) ||
-              find(workspaces, ["sys_id", item.u_workspace])
-                ?.u_name.toLowerCase()
-                .includes(searchText) ||
-              item.u_content.toLowerCase().includes(searchText)
-          )
-        );
-      } else {
-        filterList(pages);
-      }
-    }
-  }, [searchText, pages, workspaces]);
-
-  return (
-    <List
-      navigationTitle={
-        "Browse pages - " +
-        (finishedLoading
-          ? searchText
-            ? `${filteredList?.length} results from ${pages?.length} pages`
-            : pages?.length
-              ? `${pages.length} pages`
-              : `No results found`
-          : "Loading")
-      }
-      isLoading={!finishedLoading}
-      filtering={false}
-      onSearchTextChange={(text) => setSearchText(text.toLowerCase())}
-      searchBarPlaceholder="Filter..."
-      isShowingDetail={showDetails}
-      searchBarAccessory={
-        <List.Dropdown tooltip="What do you want to search for?">
-          <List.Dropdown.Item
-            title="By update date"
-            value="updated"
-            icon={Icon.Calendar}
-          />
-          <List.Dropdown.Item
-            title="By workspace"
-            value="workspaces"
-            icon={Icon.AppWindowGrid2x2}
-          />
-        </List.Dropdown>
-      }
-    >
-      {filteredList?.map((page) => {
-        const pageWorkspace = find(workspaces, ["sys_id", page.u_workspace]);
-        return (
-          <List.Item
-            key={page.sys_id}
-            title={page.u_title}
-            subtitle={page.u_subtitle}
-            icon={page.u_icon || Icon.Document}
-            accessories={
-              showDetails
-                ? null
-                : [
-                    {
-                      tag: {
-                        value: `${pageWorkspace?.u_icon || Icon.AppWindowGrid2x2} ${pageWorkspace?.u_name}`,
-                        color: Color.Blue,
-                      },
-                    },
-                    /*  { tag: { value: page.sys_updated_by, color: Color.Blue } }, */
-                    { tag: new Date(page.sys_updated_on + " GMT") },
-                  ]
-            }
-            /* accessories={[
-            { text: `An Accessory Text`, icon: Icon.Hammer },
-            { text: { value: `A Colored Accessory Text`, color: Color.Blue }, icon: Icon.Hammer },
-            { icon: Icon.Person, tooltip: "A person" },
-            { text: "Just Do It!" },
-            { date: new Date() },
-            { tag: new Date() },
-            { tag: { value: new Date(), color: Color.Magenta } },
-            { tag: { value: "User", color: Color.Magenta }, tooltip: "Tag with tooltip" },
-          ]}
- */
-            detail={
-              <List.Item.Detail
-                markdown={
-                  showPreview
-                    ? page.u_cover_photo
-                      ? `![Illustration](${page.u_cover_photo})\n\n${page.u_content}`
-                      : page.u_content
-                    : null
-                }
-                metadata={
-                  showRecordInformation && (
-                    <List.Item.Detail.Metadata>
-                      <List.Item.Detail.Metadata.Link
-                        title="Workspace"
-                        target={`${instanceUrl}/u_documate_workspace.do?sys_id=${page.u_workspace}`}
-                        text={`${pageWorkspace?.u_icon || Icon.AppWindowGrid2x2} ${pageWorkspace?.u_name}`}
-                      />
-
-                      <List.Item.Detail.Metadata.TagList title="Updated on">
-                        <List.Item.Detail.Metadata.TagList.Item
-                          text={new Date(
-                            page.sys_updated_on + " GMT"
-                          ).toLocaleString()}
-                        />
-                      </List.Item.Detail.Metadata.TagList>
-
-                      <List.Item.Detail.Metadata.TagList title="Updated by">
-                        <List.Item.Detail.Metadata.TagList.Item
-                          text={page.sys_updated_by}
-                          color={stringToColor(page.sys_updated_by)}
-                        />
-                      </List.Item.Detail.Metadata.TagList>
-
-                      <List.Item.Detail.Metadata.TagList title="Active options">
-                        {page.u_show_cover_photo == "true" && (
-                          <List.Item.Detail.Metadata.TagList.Item
-                            text="Cover"
-                            color={Color.Blue}
-                          />
-                        )}
-                        {page.u_show_subtitle == "true" && (
-                          <List.Item.Detail.Metadata.TagList.Item
-                            text="Subtitle"
-                            color={Color.Green}
-                          />
-                        )}
-                        {page.u_show_authors == "true" && (
-                          <List.Item.Detail.Metadata.TagList.Item
-                            text="Authors"
-                            color={Color.Magenta}
-                          />
-                        )}
-                        {page.u_show_last_edited == "true" && (
-                          <List.Item.Detail.Metadata.TagList.Item
-                            text="Last edited"
-                            color={Color.Orange}
-                          />
-                        )}
-                        {page.u_show_outline == "true" && (
-                          <List.Item.Detail.Metadata.TagList.Item
-                            text="Outline"
-                            color={Color.Purple}
-                          />
-                        )}
-                        {page.u_show_subpages == "true" && (
-                          <List.Item.Detail.Metadata.TagList.Item
-                            text="Subpages"
-                            color={Color.Red}
-                          />
-                        )}
-                        {page.u_show_previous_and_next == "true" && (
-                          <List.Item.Detail.Metadata.TagList.Item
-                            text="Previous and next links"
-                            color={Color.Yellow}
-                          />
-                        )}
-                      </List.Item.Detail.Metadata.TagList>
-                      <List.Item.Detail.Metadata.Label
-                        title="Font type"
-                        text={
-                          page.u_font_type == "standard"
-                            ? "Standard"
-                            : { value: "Serif", color: Color.Blue }
-                        }
-                      />
-                      <List.Item.Detail.Metadata.Label
-                        title="Font size"
-                        text={
-                          page.u_font_size == "standard"
-                            ? "Standard"
-                            : { value: "Large", color: Color.Blue }
-                        }
-                      />
-                      <List.Item.Detail.Metadata.Label
-                        title="Width"
-                        text={
-                          page.u_width == "standard"
-                            ? "Standard"
-                            : { value: "Full", color: Color.Blue }
-                        }
-                      />
-                      <List.Item.Detail.Metadata.Label
-                        title="Alignment"
-                        text={
-                          page.u_alignment == "center"
-                            ? "Center"
-                            : { value: "Left", color: Color.Blue }
-                        }
-                      />
-                    </List.Item.Detail.Metadata>
-                  )
-                }
-              />
-            }
-            actions={
-              <ActionPanel>
-                <Action
-                  title={showDetails ? "Hide Details" : "Show Details"}
-                  onAction={() => setShowDetails((x) => !x)}
-                  icon={Icon.AppWindowSidebarLeft}
-                />
-                <Action.OpenInBrowser
-                  title="Open in Documate"
-                  url={`${instanceUrl}/documate.do?w=${page.u_workspace}&p=${page.sys_id}`}
-                />
-                <Action.OpenInBrowser
-                  title="Open in backend"
-                  url={`${instanceUrl}/u_documate_page.do?sys_id=${page.sys_id}`}
-                  shortcut={{ modifiers: ["cmd", "shift"], key: "enter" }}
-                />
-
-                {showDetails && (
-                  <ActionPanel.Section title="Page details">
-                    <Action
-                      title={"Toggle show page preview"}
-                      onAction={() => setShowPreview((x) => !x)}
-                      icon={
-                        showPreview
-                          ? { source: Icon.CheckCircle, tintColor: Color.Blue }
-                          : Icon.Circle
-                      }
-                    />
-                    <Action
-                      title={"Toggle show record information"}
-                      onAction={() => setShowRecordInformation((x) => !x)}
-                      icon={
-                        showRecordInformation
-                          ? { source: Icon.CheckCircle, tintColor: Color.Blue }
-                          : Icon.Circle
-                      }
-                    />
-                  </ActionPanel.Section>
-                )}
-              </ActionPanel>
-            }
-          />
-        );
-      })}
-    </List>
-  );
+function normalizeText(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
 }
 
 function stringToColor(str: string) {
@@ -343,4 +39,329 @@ function stringToColor(str: string) {
   }
 
   return color;
+}
+
+export default function Command() {
+  const [showDetails, setShowDetails] = useCachedState("show-details", false);
+  const [showPreview, setShowPreview] = useCachedState("show-preview", false);
+  const [showRecordInformation, setShowRecordInformation] = useCachedState(
+    "show-record-information",
+    false
+  );
+  const [selectedWorkspace, setSelectedWorkspace] = useCachedState(
+    "selected-workspace",
+    "all"
+  );
+  const [normalizedSearchText, setNormalizedSearchText] = useState("");
+
+  const preferences = getPreferenceValues<Preferences>();
+
+  let instanceUrl;
+  if (preferences.instance && preferences.instance.startsWith("https://")) {
+    instanceUrl = preferences.instance;
+  } else {
+    instanceUrl = `https://${preferences.instance}.service-now.com`;
+  }
+
+  const authorization = `Basic ${Buffer.from(preferences.username + ":" + preferences.password).toString("base64")}`;
+
+  const {
+    isLoading: isLoadingPages,
+    data: pages = [],
+    pagination,
+  } = useFetch(
+    (options) => {
+      const terms = normalizedSearchText.split(" ").filter(Boolean);
+
+      const textQuery = terms
+        .map(
+          (t) =>
+            `^titleLIKE${t}^ORsubtitleLIKE${t}^ORcontentLIKE${t}^ORworkspace.nameLIKE${t}`
+        )
+        .join("");
+
+      const workspaceQuery =
+        selectedWorkspace && selectedWorkspace !== "all"
+          ? `^workspace=${selectedWorkspace}`
+          : "";
+
+      const query = `${textQuery}${workspaceQuery}^workspace.active=true^ORDERBYDESCsys_updated_on`;
+      return `${instanceUrl}/api/now/table/x_sft_documate_page?sysparm_exclude_reference_link=true&sysparm_query=${query}^workspace.active=true^ORDERBYDESCsys_updated_on&sysparm_fields=sys_id,workspace,workspace.icon,workspace.name,title,subtitle,content,icon,sys_updated_on,cover_photo,sys_updated_by&sysparm_limit=100&sysparm_offset=${options.page * 100}`;
+    },
+    {
+      headers: {
+        Authorization: authorization,
+      },
+
+      onError: (error) => {
+        console.error(error);
+        showToast(Toast.Style.Failure, "Could not fetch pages", error.message);
+      },
+
+      mapResult(response: { result: Page[] }) {
+        return { data: response.result, hasMore: response.result.length > 0 };
+      },
+      keepPreviousData: true,
+    }
+  );
+
+  const { isLoading: isLoadingWorkspaces, data: workspaces = [] } = useFetch(
+    `${instanceUrl}/api/now/table/x_sft_documate_workspace?sysparm_query=active=true^ORDERBYname&sysparm_fields=sys_id,icon,name`,
+    {
+      headers: {
+        Authorization: authorization,
+      },
+
+      onError: (error) => {
+        console.error(error);
+        showToast(
+          Toast.Style.Failure,
+          "Could not fetch workspaces",
+          error.message
+        );
+      },
+
+      mapResult(response: { result: Workspace[] }) {
+        return { data: response.result };
+      },
+      keepPreviousData: true,
+    }
+  );
+
+  const { isLoading: isLoadingMyWorkspaces, data: userWorkspaceRecords = [] } =
+    useFetch(
+      `${instanceUrl}/api/now/table/x_sft_documate_workspace_user?sysparm_exclude_reference_link=true&sysparm_query=workspace.active=true^userDYNAMIC90d1921e5f510100a9ad2572f2b477fe^role=admin^ORDERBYname&sysparm_fields=workspace`,
+      {
+        headers: {
+          Authorization: authorization,
+        },
+
+        onError: (error) => {
+          console.error(error);
+          showToast(
+            Toast.Style.Failure,
+            "Could not fetch user's workspaces",
+            error.message
+          );
+        },
+
+        mapResult(response: { result: { workspace: string }[] }) {
+          return { data: response.result };
+        },
+        keepPreviousData: true,
+      }
+    );
+
+  const myWorkspaceIdSet = useMemo(() => {
+    return new Set(
+      userWorkspaceRecords.map((r) => r.workspace).filter(Boolean)
+    );
+  }, [userWorkspaceRecords]);
+
+  const myWorkspaces = useMemo(() => {
+    return workspaces.filter((w) => myWorkspaceIdSet.has(w.sys_id));
+  }, [workspaces, myWorkspaceIdSet]);
+
+  const sharedWorkspaces = useMemo(() => {
+    return workspaces.filter((w) => !myWorkspaceIdSet.has(w.sys_id));
+  }, [workspaces, myWorkspaceIdSet]);
+
+  const pageSections = useMemo(() => {
+    return groupBy(pages, (page) => getSectionTitle(page.sys_updated_on || ""));
+  }, [pages]);
+
+  useEffect(() => {
+    if (!showPreview && !showRecordInformation) setShowDetails(false);
+  }, [showPreview, showRecordInformation]);
+
+  useEffect(() => {
+    if (showDetails && !showPreview && !showRecordInformation) {
+      setShowPreview(true);
+      setShowRecordInformation(true);
+    }
+  }, [showDetails]);
+
+  return (
+    <List
+      pagination={pagination}
+      isLoading={isLoadingPages}
+      filtering={false}
+      onSearchTextChange={(text) =>
+        setNormalizedSearchText(normalizeText(text))
+      }
+      throttle
+      searchBarPlaceholder="Search..."
+      isShowingDetail={showDetails}
+      searchBarAccessory={
+        <List.Dropdown
+          isLoading={isLoadingWorkspaces || isLoadingMyWorkspaces}
+          value={selectedWorkspace || "all"}
+          tooltip="Select the workspace you want to search in"
+          onChange={(newValue) => {
+            setSelectedWorkspace(newValue);
+          }}
+        >
+          <List.Dropdown.Item
+            key={"all"}
+            title="All workspaces"
+            value="all"
+            icon={Icon.AppWindowGrid2x2}
+          />
+          <List.Dropdown.Section title="Workspaces owned by me">
+            {myWorkspaces.map((workspace: Workspace) => (
+              <List.Dropdown.Item
+                key={workspace.sys_id}
+                title={workspace.name}
+                value={workspace.sys_id}
+                icon={workspace.icon || Icon.AppWindowGrid2x2}
+              />
+            ))}
+          </List.Dropdown.Section>
+          <List.Dropdown.Section title="Shared with me">
+            {sharedWorkspaces.map((workspace: Workspace) => (
+              <List.Dropdown.Item
+                key={workspace.sys_id}
+                title={workspace.name}
+                value={workspace.sys_id}
+                icon={workspace.icon || Icon.AppWindowGrid2x2}
+              />
+            ))}
+          </List.Dropdown.Section>
+        </List.Dropdown>
+      }
+    >
+      {Object.entries(pageSections).map(([section, pagesInSection]) => (
+        <List.Section
+          key={section}
+          title={section}
+          subtitle={`${pagesInSection.length} ${pagesInSection.length == 1 ? "result" : "results"}`}
+        >
+          {pagesInSection?.map((page) => {
+            return (
+              <List.Item
+                key={page.sys_id}
+                title={page.title || "Untitled page"}
+                subtitle={page.subtitle}
+                icon={page.icon || Icon.Document}
+                accessories={
+                  showDetails
+                    ? null
+                    : [
+                        ...(selectedWorkspace === "all"
+                          ? [
+                              {
+                                tag: {
+                                  value: `${page["workspace.icon"] || Icon.AppWindowGrid2x2} ${page["workspace.name"]}`,
+                                  color: Color.Blue,
+                                },
+                              },
+                            ]
+                          : []),
+                        {
+                          icon: getAvatarIcon(page.sys_updated_by, {
+                            background: stringToColor(page.sys_updated_by),
+                          }),
+                          tooltip: page.sys_updated_by,
+                        },
+                        {
+                          icon: Icon.Calendar,
+                          tooltip: format(
+                            new Date(page.sys_updated_on + " UTC"),
+                            "EEEE d MMMM yyyy 'at' HH:mm"
+                          ),
+                        },
+                      ]
+                }
+                detail={
+                  <List.Item.Detail
+                    markdown={
+                      showPreview
+                        ? page.cover_photo
+                          ? `![Illustration](${page.cover_photo})\n\n${page.content}`
+                          : page.content
+                        : null
+                    }
+                    metadata={
+                      showRecordInformation && (
+                        <List.Item.Detail.Metadata>
+                          <List.Item.Detail.Metadata.Link
+                            title="Workspace"
+                            target={`${instanceUrl}/x_sft_documate_workspace.do?sys_id=${page.workspace}`}
+                            text={`${page["workspace.icon"] || Icon.AppWindowGrid2x2} ${page["workspace.name"]}`}
+                          />
+
+                          <List.Item.Detail.Metadata.TagList title="Updated on">
+                            <List.Item.Detail.Metadata.TagList.Item
+                              text={new Date(
+                                page.sys_updated_on + " GMT"
+                              ).toLocaleString()}
+                            />
+                          </List.Item.Detail.Metadata.TagList>
+
+                          <List.Item.Detail.Metadata.TagList title="Updated by">
+                            <List.Item.Detail.Metadata.TagList.Item
+                              text={page.sys_updated_by}
+                              color={stringToColor(page.sys_updated_by)}
+                            />
+                          </List.Item.Detail.Metadata.TagList>
+                        </List.Item.Detail.Metadata>
+                      )
+                    }
+                  />
+                }
+                actions={
+                  <ActionPanel>
+                    <Action.OpenInBrowser
+                      title="Open in Documate"
+                      icon={{ source: "extension_icon.png" }}
+                      url={`${instanceUrl}/x_sft_documate_app.do?w=${page.workspace}&p=${page.sys_id}`}
+                    />
+                    <Action.OpenInBrowser
+                      title="Open in backend"
+                      icon={{ source: "servicenow.svg" }}
+                      url={`${instanceUrl}/x_sft_documate_page.do?sys_id=${page.sys_id}`}
+                    />
+                    <Action
+                      title={showDetails ? "Hide Details" : "Show Details"}
+                      onAction={() => setShowDetails((x) => !x)}
+                      icon={Icon.AppWindowSidebarLeft}
+                      shortcut={{ modifiers: ["cmd", "shift"], key: "enter" }}
+                    />
+                    {showDetails && (
+                      <ActionPanel.Section title="Page details">
+                        <Action
+                          title={"Toggle show page preview"}
+                          onAction={() => setShowPreview((x) => !x)}
+                          icon={
+                            showPreview
+                              ? {
+                                  source: Icon.CheckCircle,
+                                  tintColor: Color.Blue,
+                                }
+                              : Icon.Circle
+                          }
+                        />
+                        <Action
+                          title={"Toggle show record information"}
+                          onAction={() => setShowRecordInformation((x) => !x)}
+                          icon={
+                            showRecordInformation
+                              ? {
+                                  source: Icon.CheckCircle,
+                                  tintColor: Color.Blue,
+                                }
+                              : Icon.Circle
+                          }
+                        />
+                      </ActionPanel.Section>
+                    )}
+                  </ActionPanel>
+                }
+              />
+            );
+          })}
+        </List.Section>
+      ))}
+    </List>
+  );
 }
