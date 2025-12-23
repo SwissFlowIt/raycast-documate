@@ -86,7 +86,7 @@ export default function Command() {
           : "";
 
       const query = `${textQuery}${workspaceQuery}^workspace.active=true^ORDERBYDESCsys_updated_on`;
-      return `${instanceUrl}/api/now/table/x_sft_documate_page?sysparm_exclude_reference_link=true&sysparm_query=${query}^workspace.active=true^ORDERBYDESCsys_updated_on&sysparm_fields=sys_id,workspace,workspace.icon,workspace.name,title,subtitle,content,icon,sys_updated_on,cover_photo,sys_updated_by&sysparm_limit=100&sysparm_offset=${options.page * 100}`;
+      return `${instanceUrl}/api/now/table/x_sft_documate_page?sysparm_exclude_reference_link=true&sysparm_query=${query}^workspace.active=true^ORDERBYDESCsys_updated_on&sysparm_fields=sys_id,workspace,title,subtitle,content,icon,sys_updated_on,cover_photo,sys_updated_by,parent.title,parent.icon,parent&sysparm_limit=100&sysparm_offset=${options.page * 100}`;
     },
     {
       headers: {
@@ -106,7 +106,7 @@ export default function Command() {
   );
 
   const { isLoading: isLoadingWorkspaces, data: workspaces = [] } = useFetch(
-    `${instanceUrl}/api/now/table/x_sft_documate_workspace?sysparm_query=active=true^ORDERBYname&sysparm_fields=sys_id,icon,name`,
+    `${instanceUrl}/api/now/table/x_sft_documate_workspace?sysparm_query=active=true^ORDERBYname&sysparm_fields=sys_id,icon,name,description`,
     {
       headers: {
         Authorization: authorization,
@@ -152,6 +152,10 @@ export default function Command() {
       }
     );
 
+  const workspaceById = useMemo(() => {
+    return Object.fromEntries(workspaces.map((w) => [w.sys_id, w] as const));
+  }, [workspaces]);
+
   const myWorkspaceIdSet = useMemo(() => {
     return new Set(
       userWorkspaceRecords.map((r) => r.workspace).filter(Boolean)
@@ -165,6 +169,10 @@ export default function Command() {
   const sharedWorkspaces = useMemo(() => {
     return workspaces.filter((w) => !myWorkspaceIdSet.has(w.sys_id));
   }, [workspaces, myWorkspaceIdSet]);
+
+  const pageById = useMemo(() => {
+    return Object.fromEntries(pages.map((p) => [p.sys_id, p] as const));
+  }, [pages]);
 
   const pageSections = useMemo(() => {
     return groupBy(pages, (page) => getSectionTitle(page.sys_updated_on || ""));
@@ -184,7 +192,7 @@ export default function Command() {
   return (
     <List
       pagination={pagination}
-      isLoading={isLoadingPages}
+      isLoading={isLoadingPages || isLoadingWorkspaces}
       filtering={false}
       onSearchTextChange={(text) =>
         setNormalizedSearchText(normalizeText(text))
@@ -217,7 +225,7 @@ export default function Command() {
               />
             ))}
           </List.Dropdown.Section>
-          <List.Dropdown.Section title="Shared with me">
+          <List.Dropdown.Section title="Workspaces shared with me">
             {sharedWorkspaces.map((workspace: Workspace) => (
               <List.Dropdown.Item
                 key={workspace.sys_id}
@@ -236,13 +244,18 @@ export default function Command() {
           title={section}
           subtitle={`${pagesInSection.length} ${pagesInSection.length == 1 ? "result" : "results"}`}
         >
-          {pagesInSection?.map((page) => {
+          {pagesInSection.map((page) => {
+            const workspace = workspaceById[page.workspace];
+
             return (
               <List.Item
                 key={page.sys_id}
-                title={page.title || "Untitled page"}
-                subtitle={page.subtitle}
-                icon={page.icon || Icon.Document}
+                title={{
+                  value: page.title || "Untitled page",
+                  tooltip: page.subtitle,
+                }}
+                subtitle={page["parent.title"]}
+                icon={page?.icon || Icon.Document}
                 accessories={
                   showDetails
                     ? null
@@ -250,10 +263,8 @@ export default function Command() {
                         ...(selectedWorkspace === "all"
                           ? [
                               {
-                                tag: {
-                                  value: `${page["workspace.icon"] || Icon.AppWindowGrid2x2} ${page["workspace.name"]}`,
-                                  color: Color.Blue,
-                                },
+                                text: `${workspace?.icon} ${workspace?.name}`,
+                                tooltip: workspace?.description,
                               },
                             ]
                           : []),
@@ -284,26 +295,39 @@ export default function Command() {
                     metadata={
                       showRecordInformation && (
                         <List.Item.Detail.Metadata>
+                          <List.Item.Detail.Metadata.Label
+                            title="Subtitle"
+                            text={page.subtitle}
+                          />
+                          <List.Item.Detail.Metadata.Separator />
                           <List.Item.Detail.Metadata.Link
                             title="Workspace"
                             target={`${instanceUrl}/x_sft_documate_workspace.do?sys_id=${page.workspace}`}
-                            text={`${page["workspace.icon"] || Icon.AppWindowGrid2x2} ${page["workspace.name"]}`}
+                            text={`${workspace?.icon} ${workspace.name}`}
                           />
-
-                          <List.Item.Detail.Metadata.TagList title="Updated on">
-                            <List.Item.Detail.Metadata.TagList.Item
-                              text={new Date(
-                                page.sys_updated_on + " GMT"
-                              ).toLocaleString()}
+                          {page.parent ? (
+                            <List.Item.Detail.Metadata.Link
+                              title="Parent page"
+                              target={`${instanceUrl}/x_sft_documate_app.do?sys_id=${page.parent}`}
+                              text={`${page["parent.icon"]} ${page["parent.title"]}`}
                             />
-                          </List.Item.Detail.Metadata.TagList>
-
-                          <List.Item.Detail.Metadata.TagList title="Updated by">
-                            <List.Item.Detail.Metadata.TagList.Item
-                              text={page.sys_updated_by}
-                              color={stringToColor(page.sys_updated_by)}
-                            />
-                          </List.Item.Detail.Metadata.TagList>
+                          ) : (
+                            <List.Item.Detail.Metadata.Label title="Parent page" />
+                          )}
+                          <List.Item.Detail.Metadata.Separator />
+                          <List.Item.Detail.Metadata.Label
+                            title="Updated on"
+                            text={new Date(
+                              page.sys_updated_on + " GMT"
+                            ).toLocaleString()}
+                          />
+                          <List.Item.Detail.Metadata.Label
+                            title="Updated by"
+                            text={page.sys_updated_by}
+                            icon={getAvatarIcon(page.sys_updated_by, {
+                              background: stringToColor(page.sys_updated_by),
+                            })}
+                          ></List.Item.Detail.Metadata.Label>
                         </List.Item.Detail.Metadata>
                       )
                     }

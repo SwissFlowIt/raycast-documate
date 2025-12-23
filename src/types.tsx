@@ -6,6 +6,7 @@ interface Preferences {
 interface Workspace {
   sys_id: string;
   name: string;
+  description: string;
   icon: string;
 }
 
@@ -14,9 +15,10 @@ interface Page {
   title: string;
   subtitle: string;
   icon: string;
+  parent: string;
+  "parent.icon": string;
+  "parent.title": string;
   workspace: string;
-  "workspace.icon": string;
-  "workspace.name": string;
   cover_photo: string;
   content: string;
   sys_updated_on: string;
