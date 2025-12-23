@@ -12,8 +12,8 @@
   "license": "MIT",
   "commands": [
     {
-      "name": "browse-pages",
-      "title": "Browse pages",
+      "name": "search-pages",
+      "title": "Search pages",
       "description": "Access and view a list of pages from Documate",
       "mode": "view"
     }

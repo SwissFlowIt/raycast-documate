@@ -6,11 +6,12 @@ import {
   Color,
   showToast,
   Toast,
+  Image,
 } from "@raycast/api";
 import { getAvatarIcon, useCachedState, useFetch } from "@raycast/utils";
 import { useEffect, useMemo, useState } from "react";
 import { getPreferenceValues } from "@raycast/api";
-import { Page, Workspace } from "./types";
+import { Page, User, Workspace } from "./types";
 import { groupBy } from "lodash";
 import { getSectionTitle } from "./getSectionTitle";
 import { format } from "date-fns";
@@ -20,6 +21,28 @@ function normalizeText(value: string): string {
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase();
+}
+
+function parseSearchText(input: string): {
+  phrases: string[];
+  terms: string[];
+} {
+  const phrases: string[] = [];
+  const re = /"([^"]+)"/g;
+
+  let match: RegExpExecArray | null;
+  while ((match = re.exec(input)) !== null) {
+    const phrase = (match[1] ?? "").trim();
+    if (phrase) phrases.push(phrase);
+  }
+
+  const withoutPhrases = input.replace(re, " ");
+  const terms = withoutPhrases
+    .split(/\s+/)
+    .map((t) => t.trim())
+    .filter(Boolean);
+
+  return { phrases, terms };
 }
 
 function stringToColor(str: string) {
@@ -71,12 +94,13 @@ export default function Command() {
     pagination,
   } = useFetch(
     (options) => {
-      const terms = normalizedSearchText.split(" ").filter(Boolean);
+      const { phrases, terms } = parseSearchText(normalizedSearchText);
+      const tokens = [...phrases, ...terms];
 
-      const textQuery = terms
+      const textQuery = tokens
         .map(
           (t) =>
-            `^titleLIKE${t}^ORsubtitleLIKE${t}^ORcontentLIKE${t}^ORworkspace.nameLIKE${t}`
+            `^titleLIKE${t}^ORsubtitleLIKE${t}^ORcontentLIKE${t}^ORworkspace.nameLIKE${t}^ORparent.titleLIKE${t}`
         )
         .join("");
 
@@ -152,6 +176,25 @@ export default function Command() {
       }
     );
 
+  const { data: users = [] } = useFetch(
+    `${instanceUrl}/api/now/table/live_profile?sysparm_query=type=user&sysparm_fields=sys_id,photo,document.user_name,document.name`,
+    {
+      headers: {
+        Authorization: authorization,
+      },
+
+      onError: (error) => {
+        console.error(error);
+        showToast(Toast.Style.Failure, "Could not fetch users", error.message);
+      },
+
+      mapResult(response: { result: User[] }) {
+        return { data: response.result };
+      },
+      keepPreviousData: true,
+    }
+  );
+
   const workspaceById = useMemo(() => {
     return Object.fromEntries(workspaces.map((w) => [w.sys_id, w] as const));
   }, [workspaces]);
@@ -170,13 +213,15 @@ export default function Command() {
     return workspaces.filter((w) => !myWorkspaceIdSet.has(w.sys_id));
   }, [workspaces, myWorkspaceIdSet]);
 
-  const pageById = useMemo(() => {
-    return Object.fromEntries(pages.map((p) => [p.sys_id, p] as const));
-  }, [pages]);
-
   const pageSections = useMemo(() => {
     return groupBy(pages, (page) => getSectionTitle(page.sys_updated_on || ""));
   }, [pages]);
+
+  const userByName = useMemo(() => {
+    return Object.fromEntries(
+      users.map((u) => [u["document.user_name"], u] as const)
+    );
+  }, [users]);
 
   useEffect(() => {
     if (!showPreview && !showRecordInformation) setShowDetails(false);
@@ -246,6 +291,10 @@ export default function Command() {
         >
           {pagesInSection.map((page) => {
             const workspace = workspaceById[page.workspace];
+            const user = userByName[page.sys_updated_by];
+            const avatarUrl = user.photo
+              ? `${instanceUrl}/${user.photo}.iix?t=small`
+              : undefined;
 
             return (
               <List.Item
@@ -269,10 +318,13 @@ export default function Command() {
                             ]
                           : []),
                         {
-                          icon: getAvatarIcon(page.sys_updated_by, {
-                            background: stringToColor(page.sys_updated_by),
-                          }),
-                          tooltip: page.sys_updated_by,
+                          icon: avatarUrl
+                            ? {
+                                source: avatarUrl,
+                                mask: Image.Mask.Circle,
+                              }
+                            : getAvatarIcon(user["document.name"]),
+                          tooltip: user["document.name"],
                         },
                         {
                           icon: Icon.Calendar,
@@ -323,10 +375,15 @@ export default function Command() {
                           />
                           <List.Item.Detail.Metadata.Label
                             title="Updated by"
-                            text={page.sys_updated_by}
-                            icon={getAvatarIcon(page.sys_updated_by, {
-                              background: stringToColor(page.sys_updated_by),
-                            })}
+                            text={user["document.name"]}
+                            icon={
+                              avatarUrl
+                                ? {
+                                    source: avatarUrl,
+                                    mask: Image.Mask.Circle,
+                                  }
+                                : getAvatarIcon(user["document.name"])
+                            }
                           ></List.Item.Detail.Metadata.Label>
                         </List.Item.Detail.Metadata>
                       )

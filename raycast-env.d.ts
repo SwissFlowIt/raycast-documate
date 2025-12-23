@@ -20,13 +20,13 @@ type ExtensionPreferences = {
 declare type Preferences = ExtensionPreferences
 
 declare namespace Preferences {
-  /** Preferences accessible in the `browse-pages` command */
-  export type BrowsePages = ExtensionPreferences & {}
+  /** Preferences accessible in the `search-pages` command */
+  export type SearchPages = ExtensionPreferences & {}
 }
 
 declare namespace Arguments {
-  /** Arguments passed to the `browse-pages` command */
-  export type BrowsePages = {}
+  /** Arguments passed to the `search-pages` command */
+  export type SearchPages = {}
 }
 
 

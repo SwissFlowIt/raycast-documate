@@ -25,4 +25,10 @@ interface Page {
   sys_updated_by: string;
 }
 
-export type { Preferences, Workspace, Page };
+interface User {
+  "document.user_name": string;
+  "document.name": string;
+  photo: string;
+}
+
+export type { Preferences, Workspace, Page, User };
