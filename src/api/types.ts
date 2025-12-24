@@ -1,16 +1,11 @@
-interface Preferences {
-  instance: string;
-  token: string;
-}
-
-interface Workspace {
+export interface Workspace {
   sys_id: string;
   name: string;
   description: string;
   icon: string;
 }
 
-interface Page {
+export interface Page {
   sys_id: string;
   title: string;
   subtitle: string;
@@ -25,10 +20,16 @@ interface Page {
   sys_updated_by: string;
 }
 
-interface User {
+export interface User {
   "document.user_name": string;
   "document.name": string;
   photo: string;
 }
 
-export type { Preferences, Workspace, Page, User };
+export interface WorkspaceUserRecord {
+  workspace: string;
+}
+
+export interface ServiceNowResponse<T> {
+  result: T;
+}
