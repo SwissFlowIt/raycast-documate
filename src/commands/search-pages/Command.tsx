@@ -31,11 +31,11 @@ export default function Command() {
   const [showPreview, setShowPreview] = useCachedState("show-preview", false);
   const [showRecordInformation, setShowRecordInformation] = useCachedState(
     "show-record-information",
-    false,
+    false
   );
   const [selectedWorkspace, setSelectedWorkspace] = useCachedState(
     "selected-workspace",
-    "all",
+    "all"
   );
   const [normalizedSearchText, setNormalizedSearchText] = useState("");
 
@@ -43,7 +43,7 @@ export default function Command() {
   const instanceUrl = getInstanceUrl(preferences.instance);
   const authorization = createBasicAuthorizationHeader(
     preferences.username,
-    preferences.password,
+    preferences.password
   );
 
   const {
@@ -58,7 +58,7 @@ export default function Command() {
       const textQuery = tokens
         .map(
           (t) =>
-            `^titleLIKE${t}^ORsubtitleLIKE${t}^ORcontentLIKE${t}^ORworkspace.nameLIKE${t}^ORparent.titleLIKE${t}`,
+            `^titleLIKE${t}^ORsubtitleLIKE${t}^ORcontentLIKE${t}^ORworkspace.nameLIKE${t}^ORparent.titleLIKE${t}`
         )
         .join("");
 
@@ -75,7 +75,7 @@ export default function Command() {
       mapResult(response: ServiceNowResponse<Page[]>) {
         return { data: response.result, hasMore: response.result.length > 0 };
       },
-    },
+    }
   );
 
   const { isLoading: isLoadingWorkspaces, data: workspaces = [] } = useFetch(
@@ -85,7 +85,7 @@ export default function Command() {
       mapResult(response: ServiceNowResponse<Workspace[]>) {
         return { data: response.result };
       },
-    },
+    }
   );
 
   const { isLoading: isLoadingMyWorkspaces, data: userWorkspaceRecords = [] } =
@@ -94,12 +94,12 @@ export default function Command() {
       {
         ...serviceNowFetchOptions(
           authorization,
-          "Could not fetch user's workspaces",
+          "Could not fetch user's workspaces"
         ),
         mapResult(response: ServiceNowResponse<WorkspaceUserRecord[]>) {
           return { data: response.result };
         },
-      },
+      }
     );
 
   const { data: users = [] } = useFetch(
@@ -109,7 +109,7 @@ export default function Command() {
       mapResult(response: ServiceNowResponse<User[]>) {
         return { data: response.result };
       },
-    },
+    }
   );
 
   const workspaceById = useMemo(() => {
@@ -118,7 +118,7 @@ export default function Command() {
 
   const myWorkspaceIdSet = useMemo(() => {
     return new Set(
-      userWorkspaceRecords.map((r) => r.workspace).filter(Boolean),
+      userWorkspaceRecords.map((r) => r.workspace).filter(Boolean)
     );
   }, [userWorkspaceRecords]);
 
@@ -136,7 +136,7 @@ export default function Command() {
 
   const userByName = useMemo(() => {
     return Object.fromEntries(
-      users.map((u) => [u["document.user_name"], u] as const),
+      users.map((u) => [u["document.user_name"], u] as const)
     );
   }, [users]);
 
@@ -229,7 +229,8 @@ export default function Command() {
                         ...(selectedWorkspace === "all"
                           ? [
                               {
-                                text: `${workspace?.icon} ${workspace?.name}`,
+                                tag: workspace?.name,
+                                icon: workspace?.icon || Icon.AppWindowGrid2x2,
                                 tooltip: workspace?.description,
                               },
                             ]
@@ -247,7 +248,7 @@ export default function Command() {
                           icon: Icon.Calendar,
                           tooltip: format(
                             new Date(page.sys_updated_on + " UTC"),
-                            "EEEE d MMMM yyyy 'at' HH:mm",
+                            "EEEE d MMMM yyyy 'at' HH:mm"
                           ),
                         },
                       ]
@@ -287,7 +288,7 @@ export default function Command() {
                           <List.Item.Detail.Metadata.Label
                             title="Updated on"
                             text={new Date(
-                              page.sys_updated_on + " GMT",
+                              page.sys_updated_on + " GMT"
                             ).toLocaleString()}
                           />
                           <List.Item.Detail.Metadata.Label
