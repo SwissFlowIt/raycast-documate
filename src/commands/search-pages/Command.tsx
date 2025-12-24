@@ -220,7 +220,7 @@ export default function Command() {
                   value: page.title || "Untitled page",
                   tooltip: page.subtitle,
                 }}
-                subtitle={page["parent.title"]}
+                subtitle={!showDetails ? page["parent.title"] : undefined}
                 icon={page?.icon || Icon.Document}
                 accessories={
                   showDetails
@@ -278,7 +278,7 @@ export default function Command() {
                           {page.parent ? (
                             <List.Item.Detail.Metadata.Link
                               title="Parent page"
-                              target={`${instanceUrl}/x_sft_documate_app.do?sys_id=${page.parent}`}
+                              target={`${instanceUrl}/x_sft_documate_app.do?w=${page.workspace}&p=${page.parent}`}
                               text={`${page["parent.icon"]} ${page["parent.title"]}`}
                             />
                           ) : (
