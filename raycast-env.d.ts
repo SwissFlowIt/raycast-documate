@@ -29,5 +29,3 @@ declare namespace Arguments {
   export type SearchPages = {}
 }
 
-
-

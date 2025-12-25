@@ -18,6 +18,13 @@
       "mode": "view"
     }
   ],
+  "tools": [
+    {
+      "name": "search-pages-with-ai",
+      "title": "Search pages with AI",
+      "description": ""
+    }
+  ],
   "preferences": [
     {
       "name": "instance",
@@ -42,20 +49,20 @@
     }
   ],
   "dependencies": {
-    "@raycast/api": "^1.83.1",
-    "@raycast/utils": "^1.17.0",
+    "@raycast/api": "^1.104.1",
+    "@raycast/utils": "^2.2.2",
     "date-fns": "^4.1.0",
     "javascript-time-ago": "^2.5.12",
     "lodash": "^4.17.21"
   },
   "devDependencies": {
-    "@raycast/eslint-config": "^1.0.11",
-    "@types/lodash": "^4.17.7",
-    "@types/node": "20.8.10",
-    "@types/react": "18.3.3",
-    "eslint": "^8.57.0",
-    "prettier": "^3.3.3",
-    "typescript": "^5.4.5"
+    "@raycast/eslint-config": "^2.1.1",
+    "@types/lodash": "^4.17.21",
+    "@types/node": "^25.0.3",
+    "@types/react": "^19.2.7",
+    "eslint": "^9.39.2",
+    "prettier": "^3.7.4",
+    "typescript": "^5.9.3"
   },
   "scripts": {
     "build": "ray build -e dist -o dist",
