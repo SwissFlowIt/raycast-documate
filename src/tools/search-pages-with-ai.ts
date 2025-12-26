@@ -85,14 +85,6 @@ function normalizeRelativeFilterValue(value: string): string {
   const trimmed = value.trim();
   if (!trimmed) return trimmed;
 
-  // Already in ServiceNow relative format.
-  if (/^@[^@]+@ago@\d+$/i.test(trimmed)) return trimmed;
-
-  // Allow advanced ServiceNow date expressions as-is.
-  if (/^javascript:/i.test(trimmed)) return trimmed;
-
-  const normalized = trimmed.toLowerCase();
-
   const relativeUnitAliases: Record<string, string> = {
     minute: "minute",
     minutes: "minute",
@@ -104,8 +96,9 @@ function normalizeRelativeFilterValue(value: string): string {
     hr: "hour",
     hrs: "hour",
 
-    day: "day",
-    days: "day",
+    day: "dayofweek",
+    days: "dayofweek",
+    dayofweek: "dayofweek",
 
     week: "week",
     weeks: "week",
@@ -119,6 +112,20 @@ function normalizeRelativeFilterValue(value: string): string {
     yr: "year",
     yrs: "year",
   };
+
+  // Already in ServiceNow relative format (normalize known unit aliases).
+  const relativeMatch = trimmed.match(/^@([^@]+)@ago@(\d+)$/i);
+  if (relativeMatch) {
+    const unit = relativeMatch[1].toLowerCase();
+    const count = relativeMatch[2];
+    const normalizedUnit = relativeUnitAliases[unit] ?? unit;
+    return `@${normalizedUnit}@ago@${count}`;
+  }
+
+  // Allow advanced ServiceNow date expressions as-is.
+  if (/^javascript:/i.test(trimmed)) return trimmed;
+
+  const normalized = trimmed.toLowerCase();
 
   const wordNumbers: Record<string, number> = {
     a: 1,
@@ -137,12 +144,12 @@ function normalizeRelativeFilterValue(value: string): string {
     twelve: 12,
   };
 
-  if (normalized === "yesterday" || normalized === "ayer") {
-    return "@day@ago@1";
+  if (normalized === "yesterday") {
+    return "@dayofweek@ago@1";
   }
 
   const lastUnit = normalized.match(
-    /^(?:the\s+)?last\s+(minute|hour|day|week|month|year)s?$/
+    /^(?:the\s+)?last\s+(minute|hour|dayofweek|week|month|year)s?$/
   );
   if (lastUnit) {
     return `@${lastUnit[1]}@ago@1`;
@@ -381,7 +388,7 @@ async function fetchDocumatePages(
     `&sysparm_fields=${PAGES_SYSPARM_FIELDS}` +
     `&sysparm_limit=${limit}`;
 
-  // console.log("Fetching ServiceNow with sysparm_query:", encodedQuery);
+  console.log("Fetching ServiceNow with sysparm_query:", encodedQuery);
   const response = await fetch(url, { headers: { Authorization: auth } });
 
   if (!response.ok) {
@@ -495,6 +502,11 @@ export default async function SearchPagesAI(input: Input) {
 You are a query parser for ServiceNow.
 Translate the user request to English.
 Produce a JSON object that can be translated into a ServiceNow sysparm_query.
+
+Key principle:
+- Your output is a RETRIEVAL plan, not the final answer.
+- text_search terms must be chosen to fetch the most relevant candidate pages.
+- The final answer will be inferred later by an AI that reads the returned pages.
 
 Context:
 - Searchable fields: title, subtitle, content, parent.title, workspace.name, sys_created_by, sys_updated_by, sys_updated_on, sys_created_on
@@ -612,12 +624,20 @@ JSON schema (must be valid JSON):
 }
 
 Rules:
+0) Retrieval anchors vs answer goals:
+- Identify the user's intent as (answer_goal) and (retrieval_anchors).
+- retrieval_anchors are the minimum set of unique entities/topics needed to find the right pages (company names, product names, project names, acronyms, unique terms).
+- answer_goal (e.g., "contact person", "who attended", "which company") must generally NOT be included in text_search unless it is essential to disambiguate.
+- Prefer searching for the entity/topic, then let downstream AI infer the answer from the returned content.
+
 1) Limit:
 - Pick the number that is likely to include the page(s) needed to answer.
+- If retrieval_anchors are very specific (unique acronym, exact customer name, exact product/project). Use limit 1-3.
+- If retrieval_anchors are broad or ambiguous. Use limit 5-10.
 
 2) Time expressions:
 - For RELATIVE* operators, values must follow ServiceNow syntax like:
-  - "@day@ago@30"
+  - "@dayofweek@ago@30"
   - "@week@ago@2"
   - "@month@ago@1"
 - If no date is implied, do not add any date filters.
@@ -625,11 +645,10 @@ Rules:
 3) Text search (full-text via 123TEXTQUERY321):
 - Every term used in text_search must be in English.
 - Remove filler phrases like "when did we talk", "conversation", "please", etc.
-- Do NOT include ordering/recency words like "latest", "most recent", "newest", "last", "upcoming", "next" in text_search; use sort_by/sort_order instead.
-- Do NOT include author names or workspace names in text_search when those are already expressed as filters.
-- Keep each text_search short (focused on ONE variant).
-- Never duplicate the exact same text_search across blocks.
-- Avoid duplicating the same key terms across blocks; each block should introduce at least one meaningful synonym/variant.
+- Do NOT include ordering/recency words like "latest", "most recent", "newest", "last", "upcoming", "next" in text_search. Use sort_by/sort_order instead.
+- Do NOT include the whole question in text_search.
+- Focus text_search on retrieval_anchors, keep it short (usually 1-3 key terms).
+- Avoid role words that are likely to be inferred from content (e.g., "contact person", "attendees", "who is"). Prefer the entity/topic only.
 
 4) Authors:
 - sys_created_by and sys_updated_by are usernames.
@@ -645,8 +664,9 @@ Rules:
 - Do NOT guess a workspace if the user does not mention any.
 
 6) Strategy:
-- Prefer "snippets" when the answer depends on facts inside content, but only small portions are needed.
-- Use "full" only when the question requires reading long context across a page.
+- Prefer "snippets" when you expect to filter candidates quickly and only small portions are needed.
+- Prefer "full" when the question requires extracting specific facts from inside the page (names, companies, attendees, contact persons, decisions, details), especially when limit is low (1-3) and you want the downstream AI to read the entire content.
+- If retrieval_anchors are very specific and you set limit low. Choose "full" by default.
 
 7) Filters usage:
 - Use filters only for structured constraints (authors, dates, workspace, parent title, etc.).
@@ -693,7 +713,7 @@ Return ONLY the JSON object.`.trim();
 
   plan = postProcessSearchPlan(plan, query);
 
-  // console.log("Derived search plan from AI:", JSON.stringify(plan));
+  console.log("Derived search plan from AI:", JSON.stringify(plan));
 
   const preferences = getPreferenceValues<Preferences>();
   const instanceUrl = getInstanceUrl(preferences.instance);
@@ -802,7 +822,7 @@ Return ONLY the JSON object.`.trim();
       .join("\n"),
   ].join("\n");
 
-  // console.log("Context for AI:\n", contextForAI);
+  console.log("Context for AI:\n", contextForAI);
 
   return contextForAI;
 }
