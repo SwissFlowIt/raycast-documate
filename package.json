@@ -21,8 +21,8 @@
   "tools": [
     {
       "name": "search-pages-with-ai",
-      "title": "Search pages with AI",
-      "description": ""
+      "title": "Search Documate pages with AI",
+      "description": "Search Documate using natural language. The query is converted to English and matched against the most relevant pages."
     }
   ],
   "preferences": [

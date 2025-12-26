@@ -14,10 +14,13 @@ export interface Page {
   "parent.icon": string;
   "parent.title": string;
   workspace: string;
+  "workspace.name"?: string;
   cover_photo: string;
   content: string;
   sys_updated_on: string;
   sys_updated_by: string;
+  sys_created_on?: string;
+  sys_created_by?: string;
 }
 
 export interface User {
