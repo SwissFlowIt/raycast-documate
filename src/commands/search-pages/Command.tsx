@@ -5,7 +5,7 @@ import {
   List,
   Color,
   Image,
-  getPreferenceValues,
+  getPreferenceValues
 } from "@raycast/api";
 import { getAvatarIcon, useCachedState, useFetch } from "@raycast/utils";
 import { useEffect, useMemo, useState } from "react";
@@ -16,14 +16,14 @@ import {
   ServiceNowResponse,
   User,
   Workspace,
-  WorkspaceUserRecord,
+  WorkspaceUserRecord
 } from "../../api/types";
 import { getSectionTitle } from "../../lib/getSectionTitle";
 import { normalizeText, parseSearchText } from "../../lib/searchText";
 import {
   createBasicAuthorizationHeader,
   getInstanceUrl,
-  serviceNowFetchOptions,
+  serviceNowFetchOptions
 } from "../../lib/servicenow";
 
 export default function Command() {
@@ -49,7 +49,7 @@ export default function Command() {
   const {
     isLoading: isLoadingPages,
     data: pages = [],
-    pagination,
+    pagination
   } = useFetch(
     (options) => {
       const { phrases, terms } = parseSearchText(normalizedSearchText);
@@ -74,7 +74,7 @@ export default function Command() {
       ...serviceNowFetchOptions(authorization, "Could not fetch pages"),
       mapResult(response: ServiceNowResponse<Page[]>) {
         return { data: response.result, hasMore: response.result.length > 0 };
-      },
+      }
     }
   );
 
@@ -84,7 +84,7 @@ export default function Command() {
       ...serviceNowFetchOptions(authorization, "Could not fetch workspaces"),
       mapResult(response: ServiceNowResponse<Workspace[]>) {
         return { data: response.result };
-      },
+      }
     }
   );
 
@@ -98,7 +98,7 @@ export default function Command() {
         ),
         mapResult(response: ServiceNowResponse<WorkspaceUserRecord[]>) {
           return { data: response.result };
-        },
+        }
       }
     );
 
@@ -108,7 +108,7 @@ export default function Command() {
       ...serviceNowFetchOptions(authorization, "Could not fetch users"),
       mapResult(response: ServiceNowResponse<User[]>) {
         return { data: response.result };
-      },
+      }
     }
   );
 
@@ -154,7 +154,7 @@ export default function Command() {
   return (
     <List
       pagination={pagination}
-      isLoading={isLoadingPages || isLoadingWorkspaces}
+      isLoading={isLoadingPages || isLoadingWorkspaces || users.length === 0}
       filtering={false}
       onSearchTextChange={(text) =>
         setNormalizedSearchText(normalizeText(text))
@@ -200,167 +200,175 @@ export default function Command() {
         </List.Dropdown>
       }
     >
-      {Object.entries(pageSections).map(([section, pagesInSection]) => (
-        <List.Section
-          key={section}
-          title={section}
-          subtitle={`${pagesInSection.length} ${pagesInSection.length == 1 ? "result" : "results"}`}
-        >
-          {pagesInSection.map((page) => {
-            const workspace = workspaceById[page.workspace];
-            const user = userByName[page.sys_updated_by];
-            const avatarUrl = user.photo
-              ? `${instanceUrl}/${user.photo}.iix?t=small`
-              : undefined;
+      {users.length === 0
+        ? null
+        : Object.entries(pageSections).map(([section, pagesInSection]) => (
+            <List.Section
+              key={section}
+              title={section}
+              subtitle={`${pagesInSection.length} ${pagesInSection.length == 1 ? "result" : "results"}`}
+            >
+              {pagesInSection.map((page) => {
+                const workspace = workspaceById[page.workspace];
+                const user = userByName[page.sys_updated_by];
+                const avatarUrl = user.photo
+                  ? `${instanceUrl}/${user.photo}.iix?t=small`
+                  : undefined;
 
-            return (
-              <List.Item
-                key={page.sys_id}
-                title={{
-                  value: page.title || "Untitled page",
-                  tooltip: page.subtitle,
-                }}
-                subtitle={!showDetails ? page["parent.title"] : undefined}
-                icon={page?.icon || Icon.Document}
-                accessories={
-                  showDetails
-                    ? null
-                    : [
-                        ...(selectedWorkspace === "all"
-                          ? [
-                              {
-                                tag: workspace?.name,
-                                icon: workspace?.icon || Icon.AppWindowGrid2x2,
-                                tooltip: workspace?.description,
-                              },
-                            ]
-                          : []),
-                        {
-                          icon: avatarUrl
-                            ? {
-                                source: avatarUrl,
-                                mask: Image.Mask.Circle,
-                              }
-                            : getAvatarIcon(user["document.name"]),
-                          tooltip: user["document.name"],
-                        },
-                        {
-                          icon: Icon.Calendar,
-                          tooltip: format(
-                            new Date(page.sys_updated_on + " UTC"),
-                            "EEEE d MMMM yyyy 'at' HH:mm"
-                          ),
-                        },
-                      ]
-                }
-                detail={
-                  <List.Item.Detail
-                    markdown={
-                      showPreview
-                        ? page.cover_photo
-                          ? `![Illustration](${page.cover_photo})\n\n${page.content}`
-                          : page.content
-                        : null
-                    }
-                    metadata={
-                      showRecordInformation && (
-                        <List.Item.Detail.Metadata>
-                          <List.Item.Detail.Metadata.Label
-                            title="Subtitle"
-                            text={page.subtitle}
-                          />
-                          <List.Item.Detail.Metadata.Separator />
-                          <List.Item.Detail.Metadata.Link
-                            title="Workspace"
-                            target={`${instanceUrl}/x_sft_documate_workspace.do?sys_id=${page.workspace}`}
-                            text={`${workspace?.icon} ${workspace.name}`}
-                          />
-                          {page.parent ? (
-                            <List.Item.Detail.Metadata.Link
-                              title="Parent page"
-                              target={`${instanceUrl}/x_sft_documate_app.do?w=${page.workspace}&p=${page.parent}`}
-                              text={`${page["parent.icon"]} ${page["parent.title"]}`}
-                            />
-                          ) : (
-                            <List.Item.Detail.Metadata.Label title="Parent page" />
-                          )}
-                          <List.Item.Detail.Metadata.Separator />
-                          <List.Item.Detail.Metadata.Label
-                            title="Updated on"
-                            text={new Date(
-                              page.sys_updated_on + " GMT"
-                            ).toLocaleString()}
-                          />
-                          <List.Item.Detail.Metadata.Label
-                            title="Updated by"
-                            text={user["document.name"]}
-                            icon={
-                              avatarUrl
+                return (
+                  <List.Item
+                    key={page.sys_id}
+                    title={{
+                      value: page.title || "Untitled page",
+                      tooltip: page.subtitle
+                    }}
+                    subtitle={!showDetails ? page["parent.title"] : undefined}
+                    icon={page?.icon || Icon.Document}
+                    accessories={
+                      showDetails
+                        ? null
+                        : [
+                            ...(selectedWorkspace === "all"
+                              ? [
+                                  {
+                                    tag: workspace?.name,
+                                    icon:
+                                      workspace?.icon || Icon.AppWindowGrid2x2,
+                                    tooltip: workspace?.description
+                                  }
+                                ]
+                              : []),
+                            {
+                              icon: avatarUrl
                                 ? {
                                     source: avatarUrl,
-                                    mask: Image.Mask.Circle,
+                                    mask: Image.Mask.Circle
                                   }
-                                : getAvatarIcon(user["document.name"])
+                                : getAvatarIcon(user["document.name"]),
+                              tooltip: user["document.name"]
+                            },
+                            {
+                              icon: Icon.Calendar,
+                              tooltip: format(
+                                new Date(page.sys_updated_on + " UTC"),
+                                "EEEE d MMMM yyyy 'at' HH:mm"
+                              )
                             }
-                          ></List.Item.Detail.Metadata.Label>
-                        </List.Item.Detail.Metadata>
-                      )
+                          ]
+                    }
+                    detail={
+                      <List.Item.Detail
+                        markdown={
+                          showPreview
+                            ? page.cover_photo
+                              ? `![Illustration](${page.cover_photo})\n\n${page.content}`
+                              : page.content
+                            : null
+                        }
+                        metadata={
+                          showRecordInformation && (
+                            <List.Item.Detail.Metadata>
+                              <List.Item.Detail.Metadata.Label
+                                title="Subtitle"
+                                text={page.subtitle}
+                              />
+                              <List.Item.Detail.Metadata.Separator />
+                              <List.Item.Detail.Metadata.Link
+                                title="Workspace"
+                                target={`${instanceUrl}/x_sft_documate_workspace.do?sys_id=${page.workspace}`}
+                                text={`${workspace?.icon} ${workspace.name}`}
+                              />
+                              {page.parent ? (
+                                <List.Item.Detail.Metadata.Link
+                                  title="Parent page"
+                                  target={`${instanceUrl}/x_sft_documate_app.do?w=${page.workspace}&p=${page.parent}`}
+                                  text={`${page["parent.icon"]} ${page["parent.title"]}`}
+                                />
+                              ) : (
+                                <List.Item.Detail.Metadata.Label title="Parent page" />
+                              )}
+                              <List.Item.Detail.Metadata.Separator />
+                              <List.Item.Detail.Metadata.Label
+                                title="Updated on"
+                                text={new Date(
+                                  page.sys_updated_on + " GMT"
+                                ).toLocaleString()}
+                              />
+                              <List.Item.Detail.Metadata.Label
+                                title="Updated by"
+                                text={user["document.name"]}
+                                icon={
+                                  avatarUrl
+                                    ? {
+                                        source: avatarUrl,
+                                        mask: Image.Mask.Circle
+                                      }
+                                    : getAvatarIcon(user["document.name"])
+                                }
+                              ></List.Item.Detail.Metadata.Label>
+                            </List.Item.Detail.Metadata>
+                          )
+                        }
+                      />
+                    }
+                    actions={
+                      <ActionPanel>
+                        <Action.OpenInBrowser
+                          title="Open in Documate"
+                          icon={{ source: "extension_icon.png" }}
+                          url={`${instanceUrl}/x_sft_documate_app.do?w=${page.workspace}&p=${page.sys_id}`}
+                        />
+                        <Action.OpenInBrowser
+                          title="Open in backend"
+                          icon={{ source: "servicenow.svg" }}
+                          url={`${instanceUrl}/x_sft_documate_page.do?sys_id=${page.sys_id}`}
+                        />
+                        <Action
+                          title={showDetails ? "Hide Details" : "Show Details"}
+                          onAction={() => setShowDetails((x) => !x)}
+                          icon={Icon.AppWindowSidebarLeft}
+                          shortcut={{
+                            modifiers: ["cmd", "shift"],
+                            key: "enter"
+                          }}
+                        />
+                        {showDetails && (
+                          <ActionPanel.Section title="Page details">
+                            <Action
+                              title={"Toggle show page preview"}
+                              onAction={() => setShowPreview((x) => !x)}
+                              icon={
+                                showPreview
+                                  ? {
+                                      source: Icon.CheckCircle,
+                                      tintColor: Color.Blue
+                                    }
+                                  : Icon.Circle
+                              }
+                            />
+                            <Action
+                              title={"Toggle show record information"}
+                              onAction={() =>
+                                setShowRecordInformation((x) => !x)
+                              }
+                              icon={
+                                showRecordInformation
+                                  ? {
+                                      source: Icon.CheckCircle,
+                                      tintColor: Color.Blue
+                                    }
+                                  : Icon.Circle
+                              }
+                            />
+                          </ActionPanel.Section>
+                        )}
+                      </ActionPanel>
                     }
                   />
-                }
-                actions={
-                  <ActionPanel>
-                    <Action.OpenInBrowser
-                      title="Open in Documate"
-                      icon={{ source: "extension_icon.png" }}
-                      url={`${instanceUrl}/x_sft_documate_app.do?w=${page.workspace}&p=${page.sys_id}`}
-                    />
-                    <Action.OpenInBrowser
-                      title="Open in backend"
-                      icon={{ source: "servicenow.svg" }}
-                      url={`${instanceUrl}/x_sft_documate_page.do?sys_id=${page.sys_id}`}
-                    />
-                    <Action
-                      title={showDetails ? "Hide Details" : "Show Details"}
-                      onAction={() => setShowDetails((x) => !x)}
-                      icon={Icon.AppWindowSidebarLeft}
-                      shortcut={{ modifiers: ["cmd", "shift"], key: "enter" }}
-                    />
-                    {showDetails && (
-                      <ActionPanel.Section title="Page details">
-                        <Action
-                          title={"Toggle show page preview"}
-                          onAction={() => setShowPreview((x) => !x)}
-                          icon={
-                            showPreview
-                              ? {
-                                  source: Icon.CheckCircle,
-                                  tintColor: Color.Blue,
-                                }
-                              : Icon.Circle
-                          }
-                        />
-                        <Action
-                          title={"Toggle show record information"}
-                          onAction={() => setShowRecordInformation((x) => !x)}
-                          icon={
-                            showRecordInformation
-                              ? {
-                                  source: Icon.CheckCircle,
-                                  tintColor: Color.Blue,
-                                }
-                              : Icon.Circle
-                          }
-                        />
-                      </ActionPanel.Section>
-                    )}
-                  </ActionPanel>
-                }
-              />
-            );
-          })}
-        </List.Section>
-      ))}
+                );
+              })}
+            </List.Section>
+          ))}
     </List>
   );
 }
